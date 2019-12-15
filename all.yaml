@@ -60,9 +60,11 @@
   become: true
   tasks:
     - name: "Check go version"
-      shell: "source /root/.bashrc && go version"
-      args:
-        executable: /bin/bash
+      shell: go version
+      environment:
+        GOROOT: /usr/local/go
+        GOPATH: /root/go
+        PATH: /root/go/bin:/usr/local/go/bin:{{ ansible_env.PATH }}
       register: gv
 
     - debug: var=gv.stdout_lines
@@ -82,11 +84,19 @@
       args:
         executable: /bin/bash
         chdir: /root/go/src/web
-      shell: source /root/.bashrc && go build
+      shell: go build
+      environment:
+        GOROOT: /usr/local/go
+        GOPATH: /root/go
+        PATH: /root/go/bin:/usr/local/go/bin:{{ ansible_env.PATH }}
 
     - name: long running task, web server
       args:
         executable: /bin/bash
-      shell: source /root/.bashrc && /root/go/src/web/web
+      shell: /root/go/src/web/web
+      environment:
+        GOROOT: /usr/local/go
+        GOPATH: /root/go
+        PATH: /root/go/bin:/usr/local/go/bin:{{ ansible_env.PATH }}
       async: 2592000               # 60*60*24*30 – 1 month
       poll: 0
