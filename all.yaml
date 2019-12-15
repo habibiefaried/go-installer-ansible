@@ -60,7 +60,7 @@
   become: true
   tasks:
     - name: "Check go version"
-      shell: "go version"
+      shell: "source /root/.bashrc && go version"
       args:
         executable: /bin/bash
       register: gv
@@ -81,11 +81,12 @@
     - name: Go to the folder and build code
       args:
         executable: /bin/bash
-      shell: chdir=/root/go/src/web go build
+        chdir: /root/go/src/web
+      shell: source /root/.bashrc && go build
 
     - name: long running task, web server
       args:
         executable: /bin/bash
-      shell: /root/go/src/web/web
+      shell: source /root/.bashrc && /root/go/src/web/web
       async: 2592000               # 60*60*24*30 – 1 month
       poll: 0
