@@ -7,26 +7,28 @@
     - assert:
         that:
           - "groups['loadbalancer'] | length == 1"
-          - "groups['server'] | length == 1"
+          - "groups['goserv'] | length == 1"
 
 - hosts: all
   gather_facts: False
   tasks:
     - name: install python 2
-      raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal)
+      raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal python-apt)
 
 - hosts: all
   become: true
   tasks:
     - name: "Install pre-req"
-      apt: name={{item}} state=present update_cache=yes
-      with_items:
-        - python
-        - openssl
-        - snapd
-        - build-essential
-        - wget
-        - curl
+      apt:
+        name:
+          - python
+          - openssl
+          - snapd
+          - build-essential
+          - wget
+          - curl
+        state: present
+        update_cache: yes
 
 # Prepare for all go servers
 - hosts: goserv
@@ -40,17 +42,17 @@
 
     - name: adding GOROOT
       lineinfile:
-        path: /etc/profile
+        path: /root/.bashrc
         line: export GOROOT=/usr/local/go
 
     - name: adding GOPATH
       lineinfile:
-        path: /etc/profile
+        path: /root/.bashrc
         line: export GOPATH=$HOME/go
 
     - name: adding PATH
       lineinfile:
-        path: /etc/profile
+        path: /root/.bashrc
         line: export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
 # Prepare for all go servers
@@ -59,6 +61,8 @@
   tasks:
     - name: "Check go version"
       shell: "go version"
+      args:
+        executable: /bin/bash
       register: gv
 
     - debug: var=gv.stdout_lines
@@ -75,9 +79,13 @@
         mode: '0755'
 
     - name: Go to the folder and build code
-      command: chdir=/root/go/src/web go build
+      args:
+        executable: /bin/bash
+      shell: chdir=/root/go/src/web go build
 
     - name: long running task, web server
+      args:
+        executable: /bin/bash
       shell: /root/go/src/web/web
       async: 2592000               # 60*60*24*30 – 1 month
       poll: 0
