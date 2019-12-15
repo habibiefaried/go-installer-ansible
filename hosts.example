@@ -1,8 +1,8 @@
-[goserv]
-192.168.99.110
-
 [loadbalancer]
 192.168.99.109
+
+[goserv]
+192.168.99.110
 
 [all:vars]
 ansible_connection=ssh

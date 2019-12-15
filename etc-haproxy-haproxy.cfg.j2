@@ -1,0 +1,14 @@
+frontend localnodes
+    bind *:80
+    mode tcp
+    default_backend nodes
+    timeout client          1m
+
+backend nodes
+    mode tcp
+    balance roundrobin
+{% for server in groups.goserv %}
+    server {{ server }} {{ server }}:8080;
+{% endfor %}
+    timeout connect        10s
+    timeout server          1m

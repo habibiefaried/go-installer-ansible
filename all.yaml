@@ -7,7 +7,7 @@
     - assert:
         that:
           - "groups['loadbalancer'] | length == 1"
-          - "groups['goserv'] | length == 1"
+          - "groups['goserv'] | length >= 1"
 
 - hosts: all
   gather_facts: False
@@ -100,3 +100,24 @@
         PATH: /root/go/bin:/usr/local/go/bin:{{ ansible_env.PATH }}
       async: 2592000               # 60*60*24*30 – 1 month
       poll: 0
+
+- hosts: loadbalancer
+  become: true
+  tasks:
+    - name: "Installing HA Proxy"
+      apt:
+        name:
+          - haproxy
+          - liblua5.3-0
+          - vim-haproxy
+          - haproxy-doc
+        state: present
+        update_cache: yes
+
+    - name: "Configure HA Proxy"
+      template: src=etc-haproxy-haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg mode=0644
+      notify: restart haproxy
+
+  handlers:
+    - name: restart haproxy
+      service: name=haproxy state=restarted
