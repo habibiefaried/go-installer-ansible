@@ -1,0 +1,83 @@
+---
+
+- name: Inventory validation
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - assert:
+        that:
+          - "groups['loadbalancer'] | length == 1"
+          - "groups['server'] | length == 1"
+
+- hosts: all
+  gather_facts: False
+  tasks:
+    - name: install python 2
+      raw: test -e /usr/bin/python || (sudo apt -y update && sudo apt install -y python-minimal)
+
+- hosts: all
+  become: true
+  tasks:
+    - name: "Install pre-req"
+      apt: name={{item}} state=present update_cache=yes
+      with_items:
+        - python
+        - openssl
+        - snapd
+        - build-essential
+        - wget
+        - curl
+
+# Prepare for all go servers
+- hosts: goserv
+  become: true
+  tasks:
+    - name: Download and extract (added in 2.0)
+      unarchive:
+        src: https://dl.google.com/go/go1.13.linux-amd64.tar.gz
+        dest: /usr/local
+        remote_src: yes
+
+    - name: adding GOROOT
+      lineinfile:
+        path: /etc/profile
+        line: export GOROOT=/usr/local/go
+
+    - name: adding GOPATH
+      lineinfile:
+        path: /etc/profile
+        line: export GOPATH=$HOME/go
+
+    - name: adding PATH
+      lineinfile:
+        path: /etc/profile
+        line: export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+
+# Prepare for all go servers
+- hosts: goserv
+  become: true
+  tasks:
+    - name: "Check go version"
+      shell: "go version"
+      register: gv
+
+    - debug: var=gv.stdout_lines
+
+    - name: Creates directory
+      file:
+        path: /root/go/src/web
+        state: directory
+
+    - name: Download webserver.go
+      get_url:
+        url: https://gist.githubusercontent.com/habibiefaried/f782074c216aec83b4ec6126b8eebf2f/raw/fd20ee64bf346375fd8a0b3631f443de69d08143/webserver.go
+        dest: /root/go/src/web/webserver.go
+        mode: '0755'
+
+    - name: Go to the folder and build code
+      command: chdir=/root/go/src/web go build
+
+    - name: long running task, web server
+      shell: /root/go/src/web/web
+      async: 2592000               # 60*60*24*30 – 1 month
+      poll: 0
